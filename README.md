@@ -96,6 +96,7 @@ Place drone-perspective images in `testImages/`. These simulate the front camera
 
 ```bash
 cd src
+python3 drone_agent.py
 python3 main.py
 ```
 
