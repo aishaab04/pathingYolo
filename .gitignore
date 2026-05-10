@@ -1,0 +1,28 @@
+# API keys
+.env
+
+# Dataset
+drone-obstacles-detection-1/
+
+# Training outputs
+runs/
+
+# Model weights
+*.pt
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Mac system files
+.DS_Store
+
+# VS Code
+.vscode/
+
+# Plot outputs
+flight_plot.png
+grid_simulation.png
+drone_simulation.png
+
+src/__pycache__/
