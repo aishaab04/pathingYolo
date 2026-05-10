@@ -22,10 +22,11 @@ from animation import visualize
 from drone_agent import DroneAgent
 from gps_utils import cell_to_gps, gps_to_cell
 import osmnx as ox
-
+from dotenv import load_dotenv
+load_dotenv()
 # convert addresses to GPS coordinates
-START_ADDRESS = "175 Lindbergh Blvd, NJ, Teaneck"
-GOAL_ADDRESS  = "320 Fabry Ter, NJ, Teaneck"
+START_ADDRESS = os.getenv("START_ADDRESS")
+GOAL_ADDRESS  = os.getenv("END_ADDRESS")
 
 START_GPS = ox.geocode(START_ADDRESS)
 GOAL_GPS  = ox.geocode(GOAL_ADDRESS)
