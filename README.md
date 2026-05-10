@@ -152,6 +152,11 @@ Reroutes    : 2
 ```
 
 ---
+## Simulation Demo
+
+![Drone Animation](drone_animation.gif)
+
+---
 
 ## Team Contributions
 
@@ -160,11 +165,11 @@ Reroutes    : 2
 | YOLO model training (`train.py`) | Aisha |
 | Obstacle detection function (`obstacle.py`) | Aisha |
 | Dataset research + class selection | Aisha |
-| A* pathfinding (`astar.py`) | Partner |
-| D* Lite replanning (`dstar_lite.py`) | Partner |
-| Drone agent + GPS/Kalman (`drone_agent.py`, `kalman.py`) | Partner |
-| OpenStreetMap grid (`osm_to_grid.py`) | Partner |
-| Simulation integration (`main.py`) | Aisha + Partner |
+| A* pathfinding (`astar.py`) | Sowmya |
+| D* Lite replanning (`dstar_lite.py`) | Sowmya |
+| Drone agent + GPS/Kalman (`drone_agent.py`, `kalman.py`) | Sowmya |
+| OpenStreetMap grid (`osm_to_grid.py`) | Sowmya |
+| Simulation integration (`main.py`) | Aisha + Sowmya |
 
 ---
 
