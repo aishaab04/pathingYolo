@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+
 import math
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional, Set, Tuple
@@ -31,17 +32,15 @@ from osm_to_grid import GridSpec, build_grid
 
 Cell = Tuple[int, int]
 
-
 # ------------
 # Sensor callback signatures (so the agent stays hardware-agnostic)
 # ------------
-GpsFn         = Callable[[], Tuple[float, float]]                 # -> (lat, lon)
-CameraFn      = Callable[[], Tuple[np.ndarray, np.ndarray]]       # -> (front, down)
+GpsFn         = Callable[[], Tuple[float, float]]                 
+CameraFn      = Callable[[], Tuple[np.ndarray, np.ndarray]]      
 
 
 
 @dataclass
-# One step of the flight log
 class TelemetryFrame:
 
     step: int
@@ -55,8 +54,6 @@ class TelemetryFrame:
 
 
 class DroneAgent:
-
-    #  construction
     def __init__(self, spec: GridSpec, grid: np.ndarray,
                  sensor_radius_m: float = 25.0,
                  step_dt: float = 1.0) -> None:
@@ -87,11 +84,6 @@ class DroneAgent:
         gps_fn:    GpsFn,
         camera_fn: Optional[CameraFn] = None,
     ) -> List[Cell]:
-
-        # Step 1 + 2 + 4 of the workflow:
-        #   - convert GPS endpoints to grid cells
-        #   - run A* once
-        #   - hand the grid + path to D* Lite for incremental updates
 
         self._gps_fn = gps_fn
         self._cam_fn = camera_fn
@@ -200,12 +192,7 @@ class DroneAgent:
 
     # limits for the drone
     @classmethod
-    def from_bbox(
-        cls,
-        min_lat: float, min_lon: float,
-        max_lat: float, max_lon: float,
-        use_osm: bool = True,
-        **kwargs,
-    ) -> "DroneAgent":
-        grid, spec = build_grid(min_lat, min_lon, max_lat, max_lon, use_osm=use_osm)
+    def from_bbox(cls, min_lat, min_lon, max_lat, max_lon, **kwargs):
+        grid, spec = build_grid(min_lat, min_lon, max_lat, max_lon)
         return cls(spec, grid, **kwargs)
+        

@@ -8,29 +8,40 @@
 #   through the flight to trigger D* Lite re-routing.
 # * Optionally writes a matplotlib PNG showing the original path,
 #   obstacle locations, and the final actually-flown trajectory.
+
 from obstacle import detect_obstacle
+from matplotlib.animation import FuncAnimation
 
 import os
 import random
 from typing import List, Tuple
 
 import numpy as np
+from animation import visualize
 
 from drone_agent import DroneAgent
 from gps_utils import cell_to_gps, gps_to_cell
+import osmnx as ox
 
-#  demo bbox
-MIN_LAT, MIN_LON = 37.770, -122.420
-#  1.5 sq KM in San Francisco
-MAX_LAT, MAX_LON = 37.785, -122.402
+# convert addresses to GPS coordinates
+START_ADDRESS = "175 Lindbergh Blvd, NJ, Teaneck"
+GOAL_ADDRESS  = "320 Fabry Ter, NJ, Teaneck"
 
-START_GPS = (37.7715, -122.4185)
-GOAL_GPS  = (37.7838, -122.4035)
+START_GPS = ox.geocode(START_ADDRESS)
+GOAL_GPS  = ox.geocode(GOAL_ADDRESS)
+
+# bounding box — automatically built around the two points
+MIN_LAT = min(START_GPS[0], GOAL_GPS[0]) - 0.005
+MAX_LAT = max(START_GPS[0], GOAL_GPS[0]) + 0.005
+MIN_LON = min(START_GPS[1], GOAL_GPS[1]) - 0.005
+MAX_LON = max(START_GPS[1], GOAL_GPS[1]) + 0.005
+
+path_snapshots = []  # stores the path at each step
+reroute_steps = []   # stores which steps had a reroute
 
 
 # simulator Pretends to be a flight stack so the agent has things to read
 class FakeWorld:
-
 
     def __init__(self, agent: DroneAgent, jitter_m: float = 3.0) -> None:
         self.agent = agent
@@ -65,10 +76,9 @@ def run_demo(use_osm: bool = False, draw: bool = True) -> None:
     print(f"Bounding box: ({MIN_LAT}, {MIN_LON}) -> ({MAX_LAT}, {MAX_LON})")
 
     agent = DroneAgent.from_bbox(
-        MIN_LAT, MIN_LON, MAX_LAT, MAX_LON,
-        use_osm=use_osm,
-        sensor_radius_m=30.0,
-    )
+    MIN_LAT, MIN_LON, MAX_LAT, MAX_LON,
+    sensor_radius_m=30.0,
+)
     print(f"Grid built: {agent.grid.shape}  blocked cells = {int(agent.grid.sum())}")
 
     sim = FakeWorld(agent)
@@ -108,6 +118,7 @@ def run_demo(use_osm: bool = False, draw: bool = True) -> None:
 
             if detect_obstacle(image_path):
                 # block the next cell on the path
+                
                 if agent.path_index + 1 < len(agent.path):
                     blocked_cell = agent.path[agent.path_index + 1]
                     agent.grid[blocked_cell] = 1
@@ -118,12 +129,14 @@ def run_demo(use_osm: bool = False, draw: bool = True) -> None:
                     if new_path is not None:
                         agent.path = new_path
                         agent.path_index = 0
+                        reroute_steps.append(current_step)
                         reroutes += 1
                         detected_obstacles.append(blocked_cell)
                         print(f"  [step {current_step}] D* Lite reroute around {blocked_cell}")
 
         frame = agent.step()
         actual_path.append(agent.cell)
+        path_snapshots.append(list(agent.path[agent.path_index:]))
 
         if frame.step > agent.grid.size:
             print("aborting: step limit reached")
@@ -136,7 +149,8 @@ def run_demo(use_osm: bool = False, draw: bool = True) -> None:
     print(f"Actual path : {len(actual_path)} cells")
 
     if draw:
-        visualize(agent, initial_path, actual_path, detected_obstacles)
+        visualize(agent, initial_path, actual_path, detected_obstacles,
+              reroute_steps=reroute_steps, animate=True)
 
 
 
@@ -152,37 +166,6 @@ def nearest_free(grid: np.ndarray, cell: Tuple[int, int]) -> Tuple[int, int]:
                 if 0 <= r < rows and 0 <= c < cols and grid[r, c] == 0:
                     return (r, c)
     return cell
-
-
-def visualize(agent: DroneAgent, planned, actual, obstacles) -> None:
-    try:
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-    except Exception as exc:
-        print(f"matplotlib unavailable: {exc!s}")
-        return
-
-    fig, ax = plt.subplots(figsize=(9, 9))
-    ax.imshow(agent.grid, cmap="Greys", origin="lower")
-
-    pr, pc = zip(*planned)
-    ax.plot(pc, pr, "-",  linewidth=2, label="A* initial path", color="tab:blue")
-
-    ar, ac = zip(*actual)
-    ax.plot(ac, ar, "--", linewidth=2, label="Actual flight (with D* Lite)", color="tab:orange")
-
-    obs_r, obs_c = zip(*obstacles)
-    ax.scatter(obs_c, obs_r, s=120, marker="X", color="red", label="Obstacles", zorder=5)
-    ax.scatter([planned[0][1]],  [planned[0][0]],  s=140, marker="o", color="green", label="Start", zorder=5)
-    ax.scatter([planned[-1][1]], [planned[-1][0]], s=140, marker="*", color="gold",  label="Goal",  zorder=5)
-
-    ax.set_title("Drone navigation: A* (blue) + D* Lite reroutes (orange)")
-    ax.set_xlabel("col"); ax.set_ylabel("row")
-    ax.legend(loc="lower right")
-    out = os.path.join(os.path.dirname(__file__), "..", "flight_plot.png")
-    plt.savefig(out, dpi=130, bbox_inches="tight")
-    print(f"Plot saved to {out}")
 
 
 if __name__ == "__main__":

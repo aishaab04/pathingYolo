@@ -11,7 +11,7 @@ import numpy as np
 # occupancy grid where every cell is either 0  -> free / flyable airspace or  1  -> blocked  (building footprint, walls, large structure, etc.)
 # The grid is the planning surface for A* and D* Lite.
 
-GRID_SIZE = 80  # 80 x 80 grid
+GRID_SIZE = 50  # 80 x 80 grid
 
 
 @dataclass
@@ -38,64 +38,30 @@ class GridSpec:
 # -----------
 
 def osm_grid(spec: GridSpec) -> np.ndarray:
+    tags = {"building": True}
 
-
-
-    bbox = (spec.max_lat, spec.min_lat, spec.max_lon, spec.min_lon)
-    tags = {"building": True, "natural": ["water", "wood"], "barrier": True}
-
-    # geometries_from_bbox returns a GeoDataFrame of OSM features.
-    gdf = ox.features_from_bbox(*bbox, tags=tags)
+    # use features_from_polygon to avoid bbox NaN bug
+    from shapely.geometry import box as shapely_box
+    bbox_polygon = shapely_box(spec.min_lon, spec.min_lat, spec.max_lon, spec.max_lat)
+    gdf = ox.features_from_polygon(bbox_polygon, tags=tags)
 
     grid = np.zeros((spec.rows, spec.cols), dtype=np.uint8)
 
     if gdf.empty:
         return grid
 
-    # Rasterise: for every cell, test whether its centroid intersects
-    # any OSM polygon. This is O(rows*cols*features) but with 6,400 cells
-    # it remains comfortably fast for a single bbox.
     for r in range(spec.rows):
         cell_lat = spec.min_lat + (r + 0.5) * spec.lat_step
         for c in range(spec.cols):
             cell_lon = spec.min_lon + (c + 0.5) * spec.lon_step
-            cell = box(
-                cell_lon - spec.lon_step / 2,
-                cell_lat - spec.lat_step / 2,
-                cell_lon + spec.lon_step / 2,
-                cell_lat + spec.lat_step / 2,
-            )
-            if gdf.intersects(cell).any():
+            
+            # use center point only instead of full cell box
+            from shapely.geometry import Point
+            center = Point(cell_lon, cell_lat)
+            if gdf.contains(center).any():
                 grid[r, c] = 1
     return grid
 
-
-# ---------------
-# Synthetic fallback (used by the demo when OSM is unreachable)
-# --------------
-
-def synthetic_grid(spec: GridSpec, seed: int = 7) -> np.ndarray:
-
-    rng = np.random.default_rng(seed)
-    grid = np.zeros((spec.rows, spec.cols), dtype=np.uint8)
-
-    # one city block ~ 10 cells
-    block = 10
-    # 2-cell wide streets
-    street = 2
-    for r0 in range(0, spec.rows, block):
-        for c0 in range(0, spec.cols, block):
-            # leave the outer `street` rows/cols of each block empty
-            r_start = r0 + street
-            c_start = c0 + street
-            r_end = min(r0 + block - street, spec.rows)
-            c_end = min(c0 + block - street, spec.cols)
-            if r_end <= r_start or c_end <= c_start:
-                continue
-            # 70% chance the block is built up, otherwise it's a park
-            if rng.random() < 0.7:
-                grid[r_start:r_end, c_start:c_end] = 1
-    return grid
 
 
 # --------------
@@ -111,13 +77,6 @@ def build_grid(
 ) -> Tuple[np.ndarray, GridSpec]:
 
     spec = GridSpec(min_lat, min_lon, max_lat, max_lon)
-
-    if use_osm:
-        try:
-            grid = osm_grid(spec)
-            return grid, spec
-        except Exception as exc:
-            print(f"[osm_to_grid] OSM fetch failed ({exc!s}); using synthetic grid")
-
-    grid = synthetic_grid(spec)
+    grid = osm_grid(spec)
     return grid, spec
+    
