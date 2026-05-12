@@ -6,7 +6,7 @@ import numpy as np
 Cell = Tuple[int, int]
 
 # Pre-computed neighbour offsets and their step costs
-_NEIGHBOURS: Tuple[Tuple[int, int, float], ...] = (
+NEIGHBORS: Tuple[Tuple[int, int, float], ...] = (
     (-1,  0, 1.0), (1,  0, 1.0), (0, -1, 1.0), (0,  1, 1.0),
     (-1, -1, math.sqrt(2)), (-1, 1, math.sqrt(2)),
     (1,  -1, math.sqrt(2)), (1,  1, math.sqrt(2)),
@@ -23,7 +23,7 @@ def heuristic_formula(a: Cell, b: Cell) -> float:
 
 def neighbours(cell: Cell, grid: np.ndarray) -> Iterable[Tuple[Cell, float]]:
     r, c = cell
-    for dr, dc, cost in _NEIGHBOURS:
+    for dr, dc, cost in NEIGHBORS:
         nb = (r + dr, c + dc)
         if not is_within_bounds(nb, grid):
             continue
