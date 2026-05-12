@@ -11,7 +11,7 @@ import numpy as np
 # occupancy grid where every cell is either 0  -> free / flyable airspace or  1  -> blocked  (building footprint, walls, large structure, etc.)
 # The grid is the planning surface for A* and D* Lite.
 
-GRID_SIZE = 50  # 80 x 80 grid
+GRID_SIZE = 80  # 80 x 80 grid
 
 
 @dataclass
